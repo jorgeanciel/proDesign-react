@@ -107,3 +107,110 @@ export default function Preview3D({ isNew, school, state }) {
 		</Canvas>
 	);
 }
+
+let tk =
+	"sl.BYJi_q7GxIrJBk5TLpZeQ2K63jQUJmUDbJf-G9g49JRcK7J4Jqbh1MI-Sg7-lP4NFXo_z-xO4bDgu4p2tJKIFLU2pgi6l6seqvGGwAmJNza7OUVRsdkeBxoEnzPQM8Y1fVaklap6H4er";
+
+function SaveThumbnail({ projectId }) {
+	const { gl, scene, camera } = useThree();
+
+	useEffect(() => {
+		gl.render(scene, camera);
+
+		// const dataURL = gl.domElement.toDataURL("image/jpeg");
+		gl.domElement.toBlob((blob) => {
+			uploadThumbnail(projectId, blob).catch((e) => {
+				console.log(e);
+				refreshToken().then(() => uploadThumbnail(projectId, blob));
+			});
+		}, "image/png");
+
+		// const link = document.createElement("a");
+		// link.setAttribute("download", "canvas.jpeg");
+		// link.setAttribute("href", dataURL);
+
+		// link.click();
+		// link.remove();
+	}, []);
+	return null;
+}
+
+async function uploadThumbnail(projectId, blob) {
+	const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
+		method: "POST",
+		headers: {
+			Authorization: "Bearer " + tk,
+			"Content-Type": "application/octet-stream",
+			"Dropbox-API-Arg": JSON.stringify({
+				mode: "add",
+				mute: false,
+				path: "/Thumbnails/" + projectId + ".png",
+			}),
+		},
+		body: blob,
+	});
+
+	if (res.ok) {
+		const data = await res.json();
+		const res2 = await fetch(
+			"https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings",
+			{
+				method: "POST",
+				headers: {
+					Authorization: "Bearer " + tk,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					path: "/Thumbnails/" + projectId + ".png",
+				}),
+			}
+		);
+		const data2 = await res2.json();
+		updateProjectService(projectId, { thumbnail: data2.url });
+	} else {
+		const form = new URLSearchParams([
+			["grant_type", "refresh_token"],
+			[
+				"refresh_token",
+				"T2V_nhBaTMYAAAAAAAAAAXqMDy79MuERhCYETJhlIpKpSRrEdcx719CkpFq6LXDp",
+			],
+			["client_id", "st86hoxt6ris6r0"],
+		]);
+
+		fetch("https://api.dropboxapi.com/oauth2/token", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: form,
+		})
+			.then((raw) => raw.json())
+			.then((res) => {
+				tk = res.access_token;
+				uploadThumbnail(projectId, blob);
+			});
+	}
+}
+
+function refreshToken() {
+	const form = new URLSearchParams([
+		["grant_type", "refresh_token"],
+		[
+			"refresh_token",
+			"T2V_nhBaTMYAAAAAAAAAAXqMDy79MuERhCYETJhlIpKpSRrEdcx719CkpFq6LXDp",
+		],
+		["client_id", "st86hoxt6ris6r0"],
+	]);
+
+	return fetch("https://api.dropboxapi.com/oauth2/token", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		body: form,
+	})
+		.then((raw) => raw.json())
+		.then((res) => {
+			tk = res.access_token;
+		});
+}
