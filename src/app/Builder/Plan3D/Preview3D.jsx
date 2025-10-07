@@ -102,7 +102,7 @@ export default function Preview3D({ isNew, school, state }) {
 				length={terrain.length}
 				color={terrain.color}
 			/>
-			{isNew && <SaveThumbnail projectId={state.id} />}
+			{/* {isNew && <SaveThumbnail projectId={state.id} />} */}
 			{/* <gridHelper position={[0, -1, 0]} args={[terrain.width + 3348, 20, "black", "gray"]} /> */}
 		</Canvas>
 	);
